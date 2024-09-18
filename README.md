@@ -39,6 +39,13 @@ ADTM.py will get all the baseline and my method results on a dataset once, and p
 
 ### benchmark 
 
+All precomputed evaluations are placed in 
+src/blackbox/offline_evaluations
+DeepAR.csv.zip
+FCNET.csv.zip
+XGBoost.csv.zip
+nas_bench102.csv.zip
+
 To benchmark some methods on a given dataset quickly, see `benchmark_example.py`. This will run the optimizers
 and plot their convergence distribution.
 
