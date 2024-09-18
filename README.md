@@ -33,7 +33,7 @@ Regenerate figures and tables.
 ```
 python experiments/ADTM.py
 python experiments/plot.py
-
+```
 ADTM.py will get all the baseline and my method results on a dataset once, and plot.py will only draw a line graph of one result file at a time.
 
 
