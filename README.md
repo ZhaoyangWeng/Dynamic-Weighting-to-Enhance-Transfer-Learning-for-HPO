@@ -31,35 +31,10 @@ The requirements.txt is done manually and may give you something similar with le
 
 Regenerate figures and tables.
 ```
-python experiments/figure1.py
-python experiments/figure2.py
-python experiments/table2.py
-python experiments/figure_illustration.py
+python experiments/ADTM.py
+python experiments/plot.py
 
-# plot the value indicated above
-python experiments/table2-new-implem.py
-```
-
-Those script will use precomputed-results under `results_paper.csv.zip` and `results_reimplementation.csv.zip`.
-
-The format such files is:
-
-```
-task,optimizer,seed,iteration,value,blackbox
-german.numer,GCP + prior (ours),21,1,0.25602100000000005,XGBoost
-...
-```
-
-### rerun new implementation
-
-To rerun the reimplementation, you can use the following command to obtain results on a given method/task: 
-```  
-python experiments/evaluate_optimizer_task.py --task cifar10 --optimizer GCP+prior --num_seeds 2 --num_evaluations 20 --output_folder result-folder/
-```
-
-This will write `result.csv.zip` into the folder specified in output_folder.
-As the result will be for a single task/optimizer, to run all the benchmark we highly recommend parralelizing through
-your favorite cloud provider.
+ADTM.py will get all the baseline and my method results on a dataset once, and plot.py will only draw a line graph of one result file at a time.
 
 
 ### benchmark 
@@ -68,22 +43,6 @@ To benchmark some methods on a given dataset quickly, see `benchmark_example.py`
 and plot their convergence distribution.
 
 
-## Citation
-
-In case this work is useful for your research, here is a bibtex for you know what :)
-
-```
-@incollection{icml2020_4367,
- author = {Salinas, David and Shen, Huibin and Perrone, Valerio},
- booktitle = {Proceedings of Machine Learning and Systems 2020},
- pages = {7706--7716},
- title = {A quantile-based approach for hyperparameter transfer learning},
- year = {2020}
-}
-```
-
-
-In case you have any question, please feel free to open an issue or send me an email.
 
 =======
 # Dynamic-Weighting-to-Enhance-Transfer-Learning-for-HPO
