@@ -100,5 +100,20 @@ if __name__ == '__main__':
     )
     print(dtm_and_rank.to_latex())
 
+    output_dir = path / "results"
+    output_dir.mkdir(parents=True, exist_ok=True)
 
+    scores_per_blackbox.to_csv(output_dir / "scores_per_blackbox.csv")
+    rank_df.to_csv(output_dir / "rank_df.csv")
+    dtm_and_rank.to_csv(output_dir / "dtm_and_rank.csv")
+
+
+    with open(output_dir / "scores_per_blackbox.tex", "w") as f:
+        f.write(scores_per_blackbox.to_latex(float_format='%.2f', na_rep='-'))
+    
+    with open(output_dir / "rank_df.tex", "w") as f:
+        f.write(rank_df.to_latex(float_format='%.1f', na_rep='-'))
+    
+    with open(output_dir / "dtm_and_rank.tex", "w") as f:
+        f.write(dtm_and_rank.to_latex())
 

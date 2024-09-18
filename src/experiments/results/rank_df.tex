@@ -1,0 +1,23 @@
+\begin{tabular}{lrrrr}
+\toprule
+{} &  DeepAR &  FCNET &  XGBoost &  nas\_bench102 \\
+optimizer          &         &        &          &               \\
+\midrule
+RS (baseline)      &     7.1 &   10.8 &      8.2 &          12.0 \\
+TS                 &    13.0 &   13.0 &     12.7 &          14.3 \\
+CTS (ours)         &     4.5 &    2.5 &      7.6 &           2.7 \\
+GP + prior         &    11.8 &   12.0 &     11.0 &          15.3 \\
+GCP                &     4.3 &    3.8 &      3.1 &           8.0 \\
+GCP + prior (ours) &     1.7 &    1.0 &      1.9 &           1.3 \\
+GP                 &     7.9 &    8.0 &      8.4 &           8.7 \\
+AutoGP             &     7.3 &    5.5 &      4.2 &           2.3 \\
+WS GP              &     7.6 &    5.2 &      5.9 &           5.7 \\
+ABLR               &    10.2 &   10.2 &      9.1 &          10.3 \\
+ABLR Copula        &     3.1 &    5.5 &      7.0 &           5.3 \\
+SGPT               &     8.8 &    8.2 &      8.6 &           7.3 \\
+SGPT Copula        &     3.7 &    5.2 &      3.3 &           5.0 \\
+BOHB               &       - &      - &        - &          14.3 \\
+R-EA               &       - &      - &        - &          10.3 \\
+REINFORCE          &       - &      - &        - &          13.0 \\
+\bottomrule
+\end{tabular}

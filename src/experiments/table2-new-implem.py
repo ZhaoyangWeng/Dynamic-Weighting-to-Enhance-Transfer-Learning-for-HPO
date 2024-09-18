@@ -31,3 +31,19 @@ if __name__ == '__main__':
 
     print(scores_per_blackbox.to_string())
     print(scores_per_blackbox.to_latex(float_format='%.2f', na_rep='-'))
+    
+    output_dir = path / "results"
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+
+    scores_per_blackbox.to_csv(output_dir / "scores_per_blackbox.csv")
+    scores_per_task.to_csv(output_dir / "scores_per_task.csv")
+
+
+    with open(output_dir / "scores_per_blackbox.tex", "w") as f:
+        f.write(scores_per_blackbox.to_latex(float_format='%.2f', na_rep='-'))
+    
+    with open(output_dir / "scores_per_task.tex", "w") as f:
+        f.write(scores_per_task.to_latex(float_format='%.2f', na_rep='-'))
+    
+    print(f"Results saved to {output_dir}")

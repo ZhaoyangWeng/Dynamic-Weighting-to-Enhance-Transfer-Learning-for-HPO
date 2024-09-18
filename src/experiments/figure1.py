@@ -1,8 +1,12 @@
+
 from pathlib import Path
-
+import matplotlib
+matplotlib.use('Agg') 
 import matplotlib.pyplot as plt
-
 from blackbox.offline import deepar, fcnet, xgboost, nas102
+
+
+
 from experiments.load_results import load_results_paper
 from experiments.optimizer_names import names
 from experiments.optimizer_styles import optimizer_style
@@ -34,15 +38,15 @@ def plot_optimizers(df, ax, blackbox, optimizers, legend: bool = False):
     )
     ax.grid()
     if blackbox == 'DeepAR':
-        ax.set_ylim([None, 1e-2])
+        ax.set_ylim([1e-5, 1e-2])
     if blackbox == 'fcnet':
-        ax.set_ylim([None, 0.3])
+        ax.set_ylim([1e-3, 0.3])
     if blackbox == 'xgboost':
         ax.set_ylim([1e-2, 0.3])
 
     if blackbox == 'NAS':
-        ax.set_xlim([None, 65])
-        # ax.set_ylim([0.001, None])
+        ax.set_xlim([0, 65])
+        ax.set_ylim([1e-3])
     ax.set_yscale('log')
     ax.set_ylabel('ADTM')
     if not legend:
@@ -82,4 +86,4 @@ if __name__ == '__main__':
             plot_optimizers(df, blackbox=blackbox, ax=axes[i, j], optimizers=optimizers, legend=(i == 0))
     plt.savefig("adtm.pdf")
 
-    plt.show()
+    #plt.show()

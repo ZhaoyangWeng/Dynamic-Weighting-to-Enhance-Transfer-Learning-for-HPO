@@ -2,7 +2,7 @@ pandas
 numpy
 torch
 scipy
-sklearn
+scikit-learn
 torchvision
 tqdm
 botorch

@@ -78,6 +78,16 @@ def evaluate(
     df["optimizer"] = optimizer
     df.to_csv(Path(output_folder) / "result.csv.zip", index=False)
 
+#################################################
+    # Generate additional CSV with statistics
+    statistics_df = df.groupby("iteration").agg(
+        mean_value=("value", "mean"),
+        std_value=("value", "std")
+    ).reset_index()
+
+    statistics_df.to_csv(Path(output_folder) / "statistics.csv", index=False)
+
+########################
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)

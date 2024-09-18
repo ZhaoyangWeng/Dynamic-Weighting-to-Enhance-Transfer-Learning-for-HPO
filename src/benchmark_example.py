@@ -7,16 +7,17 @@ import matplotlib.pyplot as plt
 from blackbox import BlackboxOffline
 from blackbox.load_utils import evaluation_split_from_task
 from optimizer.benchmark import benchmark
+from optimizer.gaussian_process_functional_prior import G3P
 from optimizer.gaussian_process import GP
 from optimizer.random_search import RS
 from optimizer.thompson_sampling_functional_prior import TS
 
 
 if __name__ == '__main__':
-    task = "electricity"
+    task = "ImageNet16-120"
     logging.basicConfig(level=logging.INFO)
     num_seeds = 20
-    num_evaluations = 50
+    num_evaluations = 70
 
     Xys_train, (X_test, y_test) = evaluation_split_from_task(task)
     candidates = X_test
@@ -27,8 +28,10 @@ if __name__ == '__main__':
     )
 
     optimizers = {
-        #"GP + prior": partial(G3P, normalization="standard"),
-        #"GCP + prior": partial(G3P, normalization="gaussian"),
+        "GP + prior": partial(G3P, normalization="standard"),
+        "GCP + prior": partial(G3P, normalization="gaussian"),
+        "CTS": partial(TS, normalization="gaussian"),
+        "GCP": partial(GP, normalization="gaussian"),
         "RS": RS,
         "TS": TS,
         "GP": GP,
@@ -61,6 +64,6 @@ if __name__ == '__main__':
         std = y_best.std(axis=0)[:, 0]
         ax.plot(mean, label=name)
         ax.fill_between(range(len(mean)), mean - std, mean + std, alpha=0.2)
+    ax.set_ylim(52, 57) 
     plt.legend()
-    plt.show()
     plt.savefig(f"optimizer-comparison-{task}.pdf")

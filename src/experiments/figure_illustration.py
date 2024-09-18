@@ -1,4 +1,6 @@
 import seaborn as sns
+import matplotlib
+matplotlib.use('Agg') 
 import matplotlib.pyplot as plt
 
 from pathlib import Path
@@ -41,8 +43,8 @@ ax.ax.set_xlabel("x (learning rate)")
 ax.ax.set_ylabel("y")
 
 plt.tight_layout()
-plt.savefig("y_plot.jpg")
-plt.show()
+plt.savefig("y_plot.pdf")
+
 
 # plot learning rate vs CRPS mapped through psi = Phi^{-1} o F
 for task in df.task.unique():
@@ -67,8 +69,8 @@ ax.ax.set_xlabel("x (learning rate)")
 ax.ax.set_ylabel("z")
 
 plt.tight_layout()
-plt.savefig("z_plot.jpg")
-plt.show()
+plt.savefig("z_plot.pdf")
+
 
 
 ax = sns.lmplot(
@@ -87,5 +89,5 @@ ax.ax.set_xlabel("x (learning rate)")
 ax.ax.set_ylabel("z")
 
 plt.tight_layout()
-plt.savefig("z_scatter.jpg")
-plt.show()
+plt.savefig("z_scatter.pdf")
+

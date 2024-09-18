@@ -1,0 +1,14 @@
+\begin{tabular}{lrrrr}
+\toprule
+blackbox &  DeepAR &  FCNET &  XGBoost &  nas\_bench102 \\
+optimizer           &         &        &          &               \\
+\midrule
+RS                  &    0.00 &   0.00 &     0.00 &          0.00 \\
+CTS (ours)          &    0.38 &   0.83 &     0.02 &          0.88 \\
+CTS (sklearn)       &    0.54 &   0.79 &     0.17 &          0.86 \\
+CTS (pytorch)       &    0.57 &   0.76 &     0.14 &          0.96 \\
+GCP + prior (ours)  &    0.73 &   0.94 &     0.37 &          0.94 \\
+GCP+prior (sklearn) &    0.93 &   0.78 &    -0.01 &          0.97 \\
+GCP+prior (pytorch) &    0.39 &   0.77 &     0.14 &          0.98 \\
+\bottomrule
+\end{tabular}

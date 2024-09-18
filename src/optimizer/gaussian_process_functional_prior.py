@@ -1,6 +1,6 @@
 from typing import Optional, Tuple, Callable, Union, List
 import logging
-
+from functools import partial
 import numpy as np
 import torch
 from gpytorch import ExactMarginalLogLikelihood
@@ -29,10 +29,93 @@ def residual_transform(y, mu_pred, sigma_pred):
 def residual_transform_inv(z, mu_pred, sigma_pred):
     return z * sigma_pred + mu_pred
 
-
-def scale_posterior(mu_posterior, sigma_posterior, mu_est, sigma_est):
+# Initial method
+def scale_posterior1(mu_posterior, sigma_posterior, mu_est, sigma_est):
     mean = mu_posterior * sigma_est + mu_est
-    sigma = (sigma_posterior * sigma_est)
+    sigma = sigma_posterior * sigma_est
+    return mean, sigma
+
+# Weighted Product Method
+def scale_posterior2(mu_posterior, sigma_posterior, mu_est, sigma_est):
+    mean = (mu_posterior * mu_est) ** 0.5
+    sigma = (sigma_posterior * sigma_est) ** 0.5
+    return mean, sigma
+
+# Weighted average method based on weight
+def scale_posterior3(mu_posterior, sigma_posterior, mu_est, sigma_est):
+    
+    w_posterior = 1 / sigma_posterior
+    w_prior = 1 / sigma_est  
+
+    total_weight = w_posterior + w_prior
+
+    
+    w_posterior /= total_weight
+    w_prior /= total_weight
+
+    
+    mean = w_posterior * mu_posterior + w_prior * mu_est  
+
+    
+    sigma = torch.sqrt(w_posterior**2 * sigma_posterior**2 + w_prior**2 * sigma_est**2)
+
+    return mean, sigma
+
+# Bayesian weighted averaging    
+def scale_posterior4(mu_posterior, sigma_posterior, mu_est, sigma_est):
+    
+    w_posterior = 1 / sigma_posterior ** 2
+    w_prior = 1 / sigma_est ** 2
+    
+    
+    mean = (w_posterior * mu_posterior + w_prior * mu_est) / (w_posterior + w_prior)
+    
+    
+    sigma = (sigma_posterior ** 2 * sigma_est ** 2) / (sigma_posterior ** 2 + sigma_est ** 2) ** 0.5
+    
+    return mean, sigma
+
+
+# Logarithmic-Linear Combination Method
+def scale_posterior5(mu_posterior, sigma_posterior, mu_est, sigma_est):
+   
+    mean = torch.exp((torch.log(mu_posterior + 1e-6) + torch.log(mu_est + 1e-6)) / 2)
+    sigma = torch.exp((torch.log(sigma_posterior + 1e-6) + torch.log(sigma_est + 1e-6)) / 2)
+    
+    return mean, sigma
+
+
+# Information entropy weighted method
+def scale_posterior6(mu_posterior, sigma_posterior, mu_est, sigma_est):
+   
+    H_posterior = -sigma_posterior ** 2 * torch.log(sigma_posterior ** 2 + 1e-6)
+    H_prior = -sigma_est ** 2 * torch.log(sigma_est ** 2 + 1e-6)
+    
+   
+    total_entropy = H_posterior + H_prior
+    
+    
+    mean = (H_prior * mu_posterior + H_posterior * mu_est) / total_entropy
+    sigma = (H_prior * sigma_posterior + H_posterior * sigma_est) / total_entropy
+    
+    return mean, sigma
+
+# Adaptive Weight Adjustment Method
+def scale_posterior7(mu_posterior, sigma_posterior, mu_est, sigma_est):
+    
+    d_mu = (mu_posterior - mu_est) ** 2
+    d_sigma = (sigma_posterior - sigma_est) ** 2
+
+    
+    d_source_target = 0.7 * d_mu + 3 * d_sigma
+
+    
+    alpha_t = 1 / (1 + torch.exp(-3 * d_source_target))
+
+    
+    mean = alpha_t * mu_posterior + (1 - alpha_t) * mu_est
+    sigma = alpha_t * sigma_posterior + (1 - alpha_t) * sigma_est
+
     return mean, sigma
 
 
@@ -52,12 +135,14 @@ class ShiftedExpectedImprovement(ExpectedImprovement):
             model: Model,
             best_f: Union[float, Tensor],
             mean_std_predictor: Callable[[np.array], Tuple[np.array, np.array]],
+            scale_function: Callable,
             objective: Optional[ScalarizedObjective] = None,
             maximize: bool = True,
     ) -> None:
         super(ShiftedExpectedImprovement, self).__init__(model=model, best_f=best_f, objective=objective,
                                                          maximize=maximize)
         self.mean_std_predictor = mean_std_predictor
+        self.scale_function = scale_function
 
     @t_batch_mode_transform(expected_q=1)
     def forward(self, X: Tensor) -> Tensor:
@@ -82,7 +167,7 @@ class ShiftedExpectedImprovement(ExpectedImprovement):
 
         posterior = self._get_posterior(X=X)
 
-        mean, sigma = scale_posterior(
+        mean, sigma = self.scale_function(
             mu_posterior=posterior.mean,
             sigma_posterior=posterior.variance.clamp_min(1e-6).sqrt(),
             mu_est=mu_est,
@@ -116,12 +201,14 @@ class ShiftedThompsonSampling(ExpectedImprovement):
             model: Model,
             best_f: Union[float, Tensor],
             mean_std_predictor: Callable[[np.array], Tuple[np.array, np.array]],
+            scale_function: Callable,
             objective: Optional[ScalarizedObjective] = None,
             maximize: bool = True,
     ) -> None:
         super(ShiftedThompsonSampling, self).__init__(model=model, best_f=best_f, objective=objective,
                                                          maximize=maximize)
         self.mean_std_predictor = mean_std_predictor
+        self.scale_function = scale_function
 
     @t_batch_mode_transform(expected_q=1)
     def forward(self, X: Tensor) -> Tensor:
@@ -140,7 +227,7 @@ class ShiftedThompsonSampling(ExpectedImprovement):
 
         posterior = self._get_posterior(X=X)
 
-        mean, sigma = scale_posterior(
+        mean, sigma = self.scale_function(
             mu_posterior=posterior.mean,
             sigma_posterior=posterior.variance.clamp_min(1e-9).sqrt(),
             mu_est=mu_est,
@@ -159,11 +246,13 @@ class G3P(GP):
             self,
             input_dim: int,
             output_dim: int,
+            scale_function: Callable,
             bounds: Optional[np.array] = None,
             evaluations_other_tasks: Optional[List[Tuple[np.array, np.array]]] = None,
             num_gradient_updates: int = num_gradient_updates,
             normalization: str = "standard",
             prior: str = "pytorch",
+            
     ):
         super(G3P, self).__init__(
             input_dim=input_dim,
@@ -171,6 +260,7 @@ class G3P(GP):
             bounds=bounds,
             normalization=normalization,
         )
+        self.scale_function = scale_function
 
         self.initial_sampler = TS(
             input_dim=input_dim,
@@ -210,6 +300,7 @@ class G3P(GP):
                 model=gp,
                 best_f=z_observed.min(dim=0).values,
                 mean_std_predictor=self.initial_sampler.prior.predict,
+                scale_function=self.scale_function,
                 maximize=False,
             )
 

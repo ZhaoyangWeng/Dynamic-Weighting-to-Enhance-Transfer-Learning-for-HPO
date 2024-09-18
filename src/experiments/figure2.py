@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import List
-
+import matplotlib
+matplotlib.use('Agg') 
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
@@ -67,7 +68,7 @@ def plot_per_task(scores_per_task: pd.DataFrame, optimizers_to_plot: List[str]):
     os.makedirs(filename.parent, exist_ok=True)
     print(filename)
     plt.savefig(str(filename))
-    plt.show()
+
 
 
 if __name__ == '__main__':
