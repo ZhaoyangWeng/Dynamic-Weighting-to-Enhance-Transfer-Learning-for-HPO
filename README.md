@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # A-Quantile-based-Approach-for-Hyperparameter-Transfer-Learning
 
 This code reproduces the method of the paper 
@@ -102,3 +103,6 @@ In case this work is useful for your research, here is a bibtex for you know wha
 
 In case you have any question, please feel free to open an issue or send me an email.
 
+=======
+# Dynamic-Weighting-to-Enhance-Transfer-Learning-for-HPO
+>>>>>>> f0da0b2b0ac30d5a6c923b567eddb1567e773764

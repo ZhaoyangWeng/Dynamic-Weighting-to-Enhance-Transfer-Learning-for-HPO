@@ -8,7 +8,7 @@ from blackbox import BlackboxOffline
 from blackbox.load_utils import evaluation_split_from_task
 from optimizer.benchmark import benchmark
 from optimizer.gaussian_process_functional_prior import G3P
-from optimizer.gaussian_process_functional_prior import scale_posterior1, scale_posterior2, scale_posterior3, scale_posterior4, scale_posterior5, scale_posterior6, scale_posterior7
+from optimizer.gaussian_process_functional_prior-improve import IG3P
 from optimizer.gaussian_process import GP
 from optimizer.random_search import RS
 from optimizer.thompson_sampling_functional_prior import TS
@@ -25,20 +25,13 @@ def evaluate(
         output_folder: Path,
 ):
     optimizers = {
-        "GCP+Initial": partial(G3P, normalization="standard", prior=prior, scale_function=scale_posterior1),
-
-        "GCP+Product": partial(G3P, normalization="standard", prior=prior, scale_function=scale_posterior2),
-
-        "GCP+our": partial(G3P, normalization="standard", prior=prior, scale_function=scale_posterior3),
-
-        "GCP+Bayesian": partial(G3P, normalization="standard", prior=prior, scale_function=scale_posterior4),
-
-        "GCP+Logarithmic-Linear": partial(G3P, normalization="standard", prior=prior, scale_function=scale_posterior5),
-
-        "GCP+entropy": partial(G3P, normalization="standard", prior=prior, scale_function=scale_posterior6),
-
-        "GCP+Adaptive": partial(G3P, normalization="standard", prior=prior, scale_function=scale_posterior7),
-
+        "GP": partial(GP, normalization="standard"),
+        "GCP": partial(GP, normalization="gaussian"),
+        "RS": RS,
+        "IGCP + prior": partial(IG3P, normalization="gaussian"),
+        "GCP + prior": partial(G3P, normalization="gaussian", prior=prior),
+        "TS": partial(TS, normalization="standard", prior=prior),
+        "CTS": partial(TS, normalization="gaussian", prior=prior),
     }
 
     logging.info(f"Evaluating {optimizer} on {task} with {num_seeds} seeds and {num_evaluations} evaluations.")
@@ -99,7 +92,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     num_seeds = 20
     num_evaluations = 70
-    output_folder = Path.cwd() / "experiments" / "ADTM-ablation" 
+    output_folder = Path.cwd() / "experiments" / "ADTM" 
     prior = "pytorch"
 
     Xys_train, (X_test, y_test) = evaluation_split_from_task(task)
@@ -111,19 +104,13 @@ if __name__ == '__main__':
     )
 
     optimizers = {
-        "GCP+Initial": partial(G3P, normalization="standard", prior=prior, scale_function=scale_posterior1),
-
-        "GCP+Product": partial(G3P, normalization="standard", prior=prior, scale_function=scale_posterior2),
-
-        "GCP+our": partial(G3P, normalization="standard", prior=prior, scale_function=scale_posterior3),
-
-        "GCP+Bayesian": partial(G3P, normalization="standard", prior=prior, scale_function=scale_posterior4),
-
-        "GCP+Logarithmic-Linear": partial(G3P, normalization="standard", prior=prior, scale_function=scale_posterior5),
-
-        "GCP+entropy": partial(G3P, normalization="standard", prior=prior, scale_function=scale_posterior6),
-
-        "GCP+Adaptive": partial(G3P, normalization="standard", prior=prior, scale_function=scale_posterior7),
+        "IGCP + prior": partial(IG3P, normalization="gaussian"),
+        "GCP + prior": partial(G3P, normalization="gaussian"),
+        "CTS": partial(TS, normalization="gaussian"),
+        "GCP": partial(GP, normalization="gaussian"),
+        "RS": RS,
+        "TS": TS,
+        "GP": GP,
     }
 
     all_results = []

@@ -1,12 +1,8 @@
 from typing import Optional, Tuple, Callable, Union, List
 import logging
-import os
-from gpytorch.models import ExactGP
+
 import numpy as np
 import torch
-
-
-from gpytorch.priors import GammaPrior
 from gpytorch import ExactMarginalLogLikelihood
 from gpytorch.constraints import GreaterThan
 from gpytorch.likelihoods import GaussianLikelihood
@@ -35,8 +31,22 @@ def residual_transform_inv(z, mu_pred, sigma_pred):
 
 
 def scale_posterior(mu_posterior, sigma_posterior, mu_est, sigma_est):
-    mean = mu_posterior * sigma_est + mu_est
-    sigma = (sigma_posterior * sigma_est)
+    
+    w_posterior = 1 / sigma_posterior
+    w_prior = 1 / sigma_est  
+
+    total_weight = w_posterior + w_prior
+
+    
+    w_posterior /= total_weight
+    w_prior /= total_weight
+
+    
+    mean = w_posterior * mu_posterior + w_prior * mu_est  
+
+    
+    sigma = torch.sqrt(w_posterior**2 * sigma_posterior**2 + w_prior**2 * sigma_est**2)
+
     return mean, sigma
 
 
@@ -78,7 +88,6 @@ class ShiftedExpectedImprovement(ExpectedImprovement):
             # both (..., 1,)
             # (..., input_dim)
             X_features = X.detach().numpy().squeeze(1)
-            X_features = torch.Tensor(X_features)
             mu_est, sigma_est = self.mean_std_predictor(X_features)
 
             # both (..., 1, 1)
@@ -130,39 +139,35 @@ class ShiftedThompsonSampling(ExpectedImprovement):
 
     @t_batch_mode_transform(expected_q=1)
     def forward(self, X: Tensor) -> Tensor:
-        with torch.no_grad():
-            X_features = X.detach().numpy().squeeze(1)
-            X_features = torch.Tensor(X_features) 
-        
-        
-            posterior = self.mean_std_predictor(X_features)
-            mu_est = posterior.mean  
-            sigma_est = posterior.variance.clamp_min(1e-6).sqrt()  
+        """
+        :param X: A `... x 1 x d`-dim batched tensor of `d`-dim design points.
+                Expected Improvement is computed for each point individually,
+                i.e., what is considered are the marginal posteriors, not the
+                joint.
+        :return:  A `...` tensor of Expected Improvement values at the
+            given design points `X`.
+        """
 
-        mu_est = mu_est.unsqueeze(1)
-        sigma_est = sigma_est.unsqueeze(1)
+        with torch.no_grad():
+            # both (..., 1,)
+            mu_est, sigma_est = self.mean_std_predictor(X)
 
         posterior = self._get_posterior(X=X)
+
         mean, sigma = scale_posterior(
             mu_posterior=posterior.mean,
-            sigma_posterior=posterior.variance.clamp_min(1e-6).sqrt(),
+            sigma_posterior=posterior.variance.clamp_min(1e-9).sqrt(),
             mu_est=mu_est,
             sigma_est=sigma_est,
         )
-
-        u = (mean - self.best_f.expand_as(mean)) / sigma
+        normal = Normal(torch.zeros_like(mean), torch.ones_like(mean))
+        u = normal.sample() * sigma + mean
         if not self.maximize:
             u = -u
-        normal = Normal(torch.zeros_like(u), torch.ones_like(u))
-        ucdf = normal.cdf(u)
-        updf = torch.exp(normal.log_prob(u))
-        ei = sigma * (updf + u * ucdf)
-
-        return ei.squeeze(dim=-1).squeeze(dim=-1)
+        return u.squeeze(dim=-1).squeeze(dim=-1)
 
 
-
-class G3P(GP):
+class IG3P(GP):
 
     def __init__(
             self,
@@ -174,15 +179,12 @@ class G3P(GP):
             normalization: str = "standard",
             prior: str = "pytorch",
     ):
-        super(G3P, self).__init__(
+        super(IG3P, self).__init__(
             input_dim=input_dim,
             output_dim=output_dim,
             bounds=bounds,
             normalization=normalization,
         )
-        self.gp_model_path = "~/Quantile/src/experiments/GPmodels/m4-Daily_gp_model.pth"
- 
-        self.gp_model, self.likelihood = self.load_source_gp(self.gp_model_path)
 
         self.initial_sampler = TS(
             input_dim=input_dim,
@@ -192,25 +194,6 @@ class G3P(GP):
             normalization=normalization,
             prior=prior,
         )
-        
-    def load_source_gp(self, model_path: str):
-        model_path = os.path.expanduser(model_path)
-
-        dummy_train_X = torch.randn(2, self.input_dim)
-        dummy_train_Y = torch.randn(2, self.output_dim)
-
-        noise_prior = GammaPrior(concentration=1.1, rate=0.05)
-        likelihood = GaussianLikelihood(noise_prior=noise_prior)
-
-        model = SingleTaskGP(train_X=dummy_train_X, train_Y=dummy_train_Y)
-        checkpoint = torch.load(model_path)
-
-        model.load_state_dict(checkpoint['model_state_dict'])
-        likelihood.load_state_dict(checkpoint['likelihood_state_dict'], strict=False)
-
-        model.eval()
-        likelihood.eval()
-        return model, likelihood
 
     def _sample(self, candidates: Optional[np.array] = None) -> np.array:
         if len(self.X_observed) < self.num_initial_random_draws:
@@ -219,9 +202,11 @@ class G3P(GP):
             z_observed = torch.Tensor(self.transform_outputs(self.y_observed.numpy()))
 
             with torch.no_grad():
-                posterior = self.gp_model.posterior(self.X_observed)  
-                mu_pred = posterior.mean
-                sigma_pred = posterior.variance.clamp_min(1e-6).sqrt()
+                # both (n, 1)
+                #mu_pred, sigma_pred = self.thompson_sampling.prior(self.X_observed)
+                mu_pred, sigma_pred = self.initial_sampler.prior.predict(self.X_observed)
+                mu_pred = torch.Tensor(mu_pred)
+                sigma_pred = torch.Tensor(sigma_pred)
 
             # (n, 1)
             r_observed = residual_transform(z_observed, mu_pred, sigma_pred)
@@ -230,7 +215,7 @@ class G3P(GP):
             gp = SingleTaskGP(
                 train_X=self.X_observed,
                 train_Y=r_observed,
-                likelihood=GaussianLikelihood(noise_constraint=GreaterThan(1e-6)),
+                likelihood=GaussianLikelihood(noise_constraint=GreaterThan(1e-3)),
             )
             mll = ExactMarginalLogLikelihood(gp.likelihood, gp)
             fit_gpytorch_model(mll)
@@ -238,8 +223,7 @@ class G3P(GP):
             acq = ShiftedExpectedImprovement(
                 model=gp,
                 best_f=z_observed.min(dim=0).values,
-                mean_std_predictor=lambda x: (self.gp_model.posterior(x).mean, 
-                                  self.gp_model.posterior(x).variance.clamp_min(1e-6).sqrt()),
+                mean_std_predictor=self.initial_sampler.prior.predict,
                 maximize=False,
             )
 
@@ -259,12 +243,8 @@ class G3P(GP):
                 return candidate[0]
             else:
                 # (N,)
-                candidates_tensor = torch.Tensor(candidates).unsqueeze(dim=-2)
-               
-                
-                ei = acq(candidates_tensor)
-                return candidates[ei.argmax().item()]
-
+                ei = acq(torch.Tensor(candidates).unsqueeze(dim=-2))
+                return torch.Tensor(candidates[ei.argmax()])
 
 
 if __name__ == '__main__':
@@ -279,7 +259,7 @@ if __name__ == '__main__':
         eval_fun=lambda x: x.sum(axis=-1, keepdims=True),
     )
 
-    optimizer = G3P(
+    optimizer = IG3P(
         input_dim=blackbox.input_dim,
         output_dim=blackbox.output_dim,
         evaluations_other_tasks=Xy_train,
