@@ -1,9 +1,8 @@
 <<<<<<< HEAD
-# A-Quantile-based-Approach-for-Hyperparameter-Transfer-Learning
+# Dynamic Weighting of Source and Target Knowledge to Enhance Transfer Learning for Hyperparameter Optimization
 
 This code reproduces the method of the paper 
-[A quantile approach for hyperparameter transfer learning](https://icml.cc/virtual/2020/poster/6483) published at 
-ICML 2020. 
+[Dynamic Weighting of Source and Target Knowledge to Enhance Transfer Learning for Hyperparameter Optimization]
 
 Four datasets of precomputed evaluations are available (DeepAR, FCNET, XGBoost and nas_bench102). The first three 
  are taken from this [repo](https://github.com/icdishb/hyperparameter-transfer-learning-evaluations), the last 
@@ -14,24 +13,7 @@ As such, the results differ and may be slightly worse given that different frame
  pytorch for the GP in particular) but we made sure the reimplementation is reasonably close, see below for a 
  comparison with the reimplementation and our initial implementation.
  
-*Table 2 comparison*
 
-The two reimplementations are indicated with \*, two parameteric priors have been implemented with sklearn and pytorch.
-
-```
-blackbox               DeepAR     FCNET   XGBoost  nas_bench102
-optimizer                                                      
-RS                   0.000000  0.000000  0.000000      0.000000
-CTS                  0.378205  0.825543  0.015180      0.876395
-CTS* (sklearn)       0.541521  0.790564  0.170170      0.859444
-CTS* (pytorch)       0.567947  0.763614  0.140947      0.956671
-GCP + prior          0.733711  0.942026  0.371962      0.940347
-GCP+prior* (sklearn) 0.933025  0.780496 -0.012777      0.969306
-GCP+prior* (pytorch) 0.389110  0.769105  0.137245      0.978004
-```
-
-I have cleaned the code so that Figure 1, Figure 2 and Table 2 can be recomputed in case you want to compare with your 
-new method or evaluate again the proposed method.  
 
 ## How to run
 
